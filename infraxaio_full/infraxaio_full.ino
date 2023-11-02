@@ -14,7 +14,9 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800
 
 void setup() {
   Serial.begin(9600);
-
+ 
+  pinMode(D3,OUTPUT);digitalWrite(D3,LOW);
+  pinMode(D4,OUTPUT);digitalWrite(D4,HIGH);
   irrecv.enableIRIn();  // Démarrer le récepteur
   strip.begin();  // Initialiser la bande de LEDs
   strip.show();   // Initialiser toutes les pixels à 'off'
