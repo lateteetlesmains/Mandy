@@ -1,5 +1,3 @@
-// Nom du fichier : IR_LED_Control.ino
-
 #include <IRremote.h>
 #include <Adafruit_NeoPixel.h>
 
@@ -12,45 +10,24 @@ decode_results results;
 
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
 
-int mode = 0;
+// Variables pour le mode arc-en-ciel
+unsigned long previousMillis = 0;
+const long interval = 50;
+int currentPixel = 0;
+int rainbowStep = 5;
+int mode = 0;  // 0 pour aucun effet, 1 pour arc-en-ciel
 
 void setup() {
   Serial.begin(9600);
-   pinMode(D3,OUTPUT);digitalWrite(D3,LOW);
-  pinMode(D4,OUTPUT);digitalWrite(D4,HIGH);
-  irrecv.enableIRIn(); 
+
+  pinMode(D3, OUTPUT);
+  digitalWrite(D3, LOW);
+  pinMode(D4, OUTPUT);
+  digitalWrite(D4, HIGH);
+
+  irrecv.enableIRIn();
   strip.begin();
   strip.show();
-
-  for(int i=0; i<strip.numPixels(); i++) {
-    strip.setPixelColor(i, strip.Color(0,0,255));
-    strip.show();
-    delay(50);
-  }
-}
-
-void rainbow(int wait) {
-  uint16_t i, j;
-  for(j=0; j<256; j++) {
-    for(i=0; i<strip.numPixels(); i++) {
-      strip.setPixelColor(i, Wheel((i+j) & 255));
-    }
-    strip.show();
-    delay(wait);
-  }
-}
-
-uint32_t Wheel(byte WheelPos) {
-  WheelPos = 255 - WheelPos;
-  if(WheelPos < 85) {
-    return strip.Color(255 - WheelPos * 3, 0, WheelPos * 3);
-  }
-  if(WheelPos < 170) {
-    WheelPos -= 85;
-    return strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
-  }
-  WheelPos -= 170;
-  return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
 }
 
 void loop() {
@@ -59,68 +36,63 @@ void loop() {
     Serial.println(lastOctets, HEX);
     irrecv.resume();
 
-    if (lastOctets == 0xA) {
-      mode++;
-      if (mode > 4) {
-        mode = 0;
-      }
-
-      switch(mode) {
-        case 0:
-          for(int i=0; i<strip.numPixels(); i++) {
-            strip.setPixelColor(i, strip.Color(0,0,255)); 
-            strip.show();
-            delay(50);
-          }
-          break;
-        case 1:
-          for(int i=0; i<strip.numPixels(); i++) {
-            strip.setPixelColor(i, strip.Color(255,0,0)); 
-            strip.show();
-            delay(50);
-          }
-          break;
-        case 2:
-          for(int i=0; i<strip.numPixels(); i++) {
-            strip.setPixelColor(i, strip.Color(0,255,0)); 
-            strip.show();
-            delay(50);
-          }
-          break;
-        case 3:
-          for(int i=0; i<strip.numPixels(); i++) {
-            strip.setPixelColor(i, strip.Color(255,255,255)); 
-            strip.show();
-            delay(50);
-          }
-          break;
-        case 4:
-          rainbow(20);
-          break;
-      }
-    }
-    if (lastOctets == 0xB) {
-      // Augmente la luminosité
-      uint8_t brightness = strip.getBrightness();
-      brightness += 20;
-      if (brightness > 255) brightness = 255;
-      strip.setBrightness(brightness);
-      strip.show();
-    }
-    if (lastOctets == 0xC) {
-      // Éteint les LEDs
-      for(int i=0; i<strip.numPixels(); i++) {
-        strip.setPixelColor(i, strip.Color(0,0,0));
-        strip.show();
-      }
-    }
-    if (lastOctets == 0xD) {
-      // Diminue la luminosité
-      uint8_t brightness = strip.getBrightness();
-      brightness -= 20;
-      if (brightness < 0) brightness = 0;
-      strip.setBrightness(brightness);
-      strip.show();
+    switch (lastOctets) {
+      case 0xA:
+        mode = 1;  // Activer le mode arc-en-ciel
+        break;
+      case 0xB:
+        mode = 0;  // Désactiver l'effet
+        colorWipe(strip.Color(255, 0, 0));  // Rouge
+        break;
+      case 0xC:
+        mode = 0;  // Désactiver l'effet
+        colorWipe(strip.Color(0, 0, 0));  // Éteindre les LEDs
+        break;
+      case 0xD:
+        mode = 0;  // Désactiver l'effet
+        colorWipe(strip.Color(0, 0, 255));  // Bleu
+        break;
     }
   }
+
+  if (mode == 1) {
+    updateRainbow();
+  }
+}
+
+void colorWipe(uint32_t c) {
+  for (uint16_t i = 0; i < strip.numPixels(); i++) {
+    strip.setPixelColor(i, c);
+    strip.show();
+    delay(50);
+  }
+}
+
+void updateRainbow() {
+  unsigned long currentMillis = millis();
+
+  if (currentMillis - previousMillis >= interval) {
+    if (currentPixel < strip.numPixels()) {
+      int color = Wheel(((currentPixel * rainbowStep) % 255));
+      strip.setPixelColor(currentPixel, color);
+      strip.show();
+      currentPixel++;
+    } else {
+      currentPixel = 0;
+    }
+    previousMillis = currentMillis;
+  }
+}
+
+uint32_t Wheel(byte WheelPos) {
+  WheelPos = 255 - WheelPos;
+  if (WheelPos < 85) {
+    return strip.Color(255 - WheelPos * 3, 0, WheelPos * 3);
+  }
+  if (WheelPos < 170) {
+    WheelPos -= 85;
+    return strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
+  }
+  WheelPos -= 170;
+  return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
 }
