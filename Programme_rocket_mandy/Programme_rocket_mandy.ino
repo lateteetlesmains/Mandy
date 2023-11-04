@@ -67,7 +67,7 @@ void loop() {
 
     if (lastOctets == 0xA) {
       mode++;
-      if (mode > 4) {
+      if (mode > 3) {
         mode = 0;
       }
 
@@ -88,7 +88,7 @@ void loop() {
           break;
         case 2:
           for(int i=0; i<strip.numPixels(); i++) {
-            strip.setPixelColor(i, strip.Color(0,255,0)); 
+            strip.setPixelColor(i, strip.Color(166,0,205)); 
             strip.show();
             delay(50);
           }
@@ -130,7 +130,7 @@ void loop() {
     }
    lastOctets =0xF;
   }
-   delay(500);
+   delay(400);
    if (rainbow_On==true)
    {
     rainbow(20);
